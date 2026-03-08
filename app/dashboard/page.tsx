@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 import axios from '@/lib/axios'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { TrendingUp, Package, CheckCircle, XCircle, Trophy, AlertTriangle, Activity } from 'lucide-react'
 
 interface OEE {
   oee: string
@@ -48,7 +50,6 @@ export default function Dashboard() {
         const prods: Production[] = prodRes.data
         setProductions(prods)
 
-        // Calcul stats par ouvrier
         const stats: Record<string, OuvrierStat> = {}
         prods.forEach((p) => {
           if (!p.ouvrier) return
@@ -83,43 +84,80 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-6">
 
-      <div>
-        <h2 className="text-2xl font-bold text-zinc-800">Tableau de bord</h2>
-        <p className="text-sm text-zinc-500">Vue d&apos;ensemble de la production</p>
+      {/* Titre */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-zinc-800">Tableau de bord</h2>
+          <p className="text-sm text-zinc-500">Vue d&apos;ensemble de la production</p>
+        </div>
+        <div className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-full text-sm font-medium">
+          <Activity size={16} />
+          Système actif
+        </div>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-4">
-        <Card className="shadow-none border border-zinc-100">
-          <CardContent className="pt-5 text-center">
-            <p className="text-xs text-zinc-400 uppercase tracking-wide">OEE</p>
-            <p className="text-3xl font-bold text-blue-600 mt-1">{oee?.oee ?? '—'}</p>
+        <Card className="border-0 shadow-sm bg-blue-50">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-blue-500 uppercase tracking-wide font-semibold">OEE Global</p>
+              <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center">
+                <TrendingUp size={18} className="text-blue-600" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-blue-700">{oee?.oee ?? '—'}</p>
+            <p className="text-xs text-blue-400 mt-1">Efficacité globale</p>
           </CardContent>
         </Card>
-        <Card className="shadow-none border border-zinc-100">
-          <CardContent className="pt-5 text-center">
-            <p className="text-xs text-zinc-400 uppercase tracking-wide">Total produit</p>
-            <p className="text-3xl font-bold text-zinc-800 mt-1">{oee?.totalProduit ?? '—'}</p>
+
+        <Card className="border-0 shadow-sm bg-zinc-50">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-zinc-500 uppercase tracking-wide font-semibold">Total produit</p>
+              <div className="w-9 h-9 bg-zinc-200 rounded-xl flex items-center justify-center">
+                <Package size={18} className="text-zinc-600" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-zinc-800">{oee?.totalProduit ?? '—'}</p>
+            <p className="text-xs text-zinc-400 mt-1">Unités fabriquées</p>
           </CardContent>
         </Card>
-        <Card className="shadow-none border border-zinc-100">
-          <CardContent className="pt-5 text-center">
-            <p className="text-xs text-zinc-400 uppercase tracking-wide">Qualité</p>
-            <p className="text-3xl font-bold text-emerald-600 mt-1">{oee?.qualite ?? '—'}</p>
+
+        <Card className="border-0 shadow-sm bg-emerald-50">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-emerald-500 uppercase tracking-wide font-semibold">Qualité</p>
+              <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <CheckCircle size={18} className="text-emerald-600" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-emerald-700">{oee?.qualite ?? '—'}</p>
+            <p className="text-xs text-emerald-400 mt-1">Taux de conformité</p>
           </CardContent>
         </Card>
-        <Card className="shadow-none border border-zinc-100">
-          <CardContent className="pt-5 text-center">
-            <p className="text-xs text-zinc-400 uppercase tracking-wide">Non conformes</p>
-            <p className="text-3xl font-bold text-red-500 mt-1">{oee?.totalNonConforme ?? '—'}</p>
+
+        <Card className="border-0 shadow-sm bg-red-50">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-red-500 uppercase tracking-wide font-semibold">Non conformes</p>
+              <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center">
+                <XCircle size={18} className="text-red-600" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-red-600">{oee?.totalNonConforme ?? '—'}</p>
+            <p className="text-xs text-red-400 mt-1">Unités rejetées</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Graphique */}
-      <Card className="shadow-none border border-zinc-100">
-        <CardHeader>
-          <CardTitle className="text-base">Productions récentes</CardTitle>
+      <Card className="shadow-sm border border-zinc-100">
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <Activity size={18} className="text-blue-600" />
+            <CardTitle className="text-base">Productions récentes</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           {dataProduction.length === 0 ? (
@@ -127,7 +165,7 @@ export default function Dashboard() {
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={dataProduction}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" />
                 <XAxis dataKey="nom" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
@@ -142,9 +180,12 @@ export default function Dashboard() {
 
       {/* TOP 5 et moins performants */}
       <div className="grid grid-cols-2 gap-4">
-        <Card className="shadow-none border border-zinc-100">
-          <CardHeader>
-            <CardTitle className="text-base">🏆 Top 5 — Les plus performants</CardTitle>
+        <Card className="shadow-sm border border-zinc-100">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <Trophy size={18} className="text-yellow-500" />
+              <CardTitle className="text-base">Top 5 — Les plus performants</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             {top5.length === 0 ? (
@@ -152,9 +193,11 @@ export default function Dashboard() {
             ) : (
               <div className="flex flex-col gap-3">
                 {top5.map((o, i) => (
-                  <div key={i} className="flex justify-between items-center">
+                  <div key={i} className="flex justify-between items-center p-2 rounded-xl hover:bg-zinc-50">
                     <div className="flex items-center gap-3">
-                      <span className="text-zinc-400 text-sm w-5">{i + 1}</span>
+                      <span className={`text-sm font-bold w-5 ${i === 0 ? 'text-yellow-500' : i === 1 ? 'text-zinc-400' : i === 2 ? 'text-orange-400' : 'text-zinc-300'}`}>
+                        #{i + 1}
+                      </span>
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                         <span className="text-blue-600 text-xs font-bold">
                           {o.nom.split(' ').map(n => n[0]).join('')}
@@ -163,8 +206,10 @@ export default function Dashboard() {
                       <p className="text-sm font-medium">{o.nom}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-emerald-600">{o.taux.toFixed(1)}%</p>
-                      <p className="text-xs text-zinc-400">{o.produit} prod.</p>
+                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                        {o.taux.toFixed(1)}%
+                      </Badge>
+                      <p className="text-xs text-zinc-400 mt-1">{o.produit} prod.</p>
                     </div>
                   </div>
                 ))}
@@ -173,9 +218,12 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none border border-zinc-100">
-          <CardHeader>
-            <CardTitle className="text-base">⚠️ Les moins performants</CardTitle>
+        <Card className="shadow-sm border border-zinc-100">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={18} className="text-orange-500" />
+              <CardTitle className="text-base">Les moins performants</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             {moins5.length === 0 ? (
@@ -183,7 +231,7 @@ export default function Dashboard() {
             ) : (
               <div className="flex flex-col gap-3">
                 {moins5.map((o, i) => (
-                  <div key={i} className="flex justify-between items-center">
+                  <div key={i} className="flex justify-between items-center p-2 rounded-xl hover:bg-zinc-50">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
                         <span className="text-red-600 text-xs font-bold">
@@ -193,8 +241,10 @@ export default function Dashboard() {
                       <p className="text-sm font-medium">{o.nom}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-red-500">{o.taux.toFixed(1)}%</p>
-                      <p className="text-xs text-zinc-400">{o.nonConforme} NOK</p>
+                      <Badge className="bg-red-100 text-red-600 hover:bg-red-100">
+                        {o.taux.toFixed(1)}%
+                      </Badge>
+                      <p className="text-xs text-zinc-400 mt-1">{o.nonConforme} NOK</p>
                     </div>
                   </div>
                 ))}
@@ -205,9 +255,12 @@ export default function Dashboard() {
       </div>
 
       {/* Dernières productions */}
-      <Card className="shadow-none border border-zinc-100">
-        <CardHeader>
-          <CardTitle className="text-base">Dernières productions</CardTitle>
+      <Card className="shadow-sm border border-zinc-100">
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <Package size={18} className="text-zinc-600" />
+            <CardTitle className="text-base">Dernières productions</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           {productions.length === 0 ? (
@@ -216,22 +269,32 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-zinc-400">
-                  <th className="text-left py-2">Ouvrier</th>
-                  <th className="text-left py-2">Référence</th>
-                  <th className="text-left py-2">Total</th>
-                  <th className="text-left py-2">Conformes</th>
-                  <th className="text-left py-2">Non conformes</th>
-                  <th className="text-left py-2">Heure</th>
+                  <th className="text-left py-2 font-medium">Ouvrier</th>
+                  <th className="text-left py-2 font-medium">Référence</th>
+                  <th className="text-left py-2 font-medium">Total</th>
+                  <th className="text-left py-2 font-medium">Conformes</th>
+                  <th className="text-left py-2 font-medium">Non conformes</th>
+                  <th className="text-left py-2 font-medium">Heure</th>
                 </tr>
               </thead>
               <tbody>
                 {productions.slice(0, 10).map((p) => (
-                  <tr key={p.id} className="border-b hover:bg-zinc-50">
+                  <tr key={p.id} className="border-b hover:bg-zinc-50 transition-colors">
                     <td className="py-3 font-medium">{p.ouvrier?.prenom} {p.ouvrier?.nom}</td>
-                    <td className="py-3 text-zinc-500">{p.reference}</td>
+                    <td className="py-3">
+                      <Badge className="bg-blue-50 text-blue-600 hover:bg-blue-50 font-normal">
+                        {p.reference}
+                      </Badge>
+                    </td>
                     <td className="py-3 font-bold">{p.quantiteProduite}</td>
-                    <td className="py-3 text-emerald-600 font-bold">{p.quantiteConforme}</td>
-                    <td className="py-3 text-red-500 font-bold">{p.quantiteNonConforme}</td>
+                    <td className="py-3">
+                      <span className="text-emerald-600 font-bold">{p.quantiteConforme}</span>
+                    </td>
+                    <td className="py-3">
+                      <span className={p.quantiteNonConforme > 0 ? 'text-red-500 font-bold' : 'text-zinc-400'}>
+                        {p.quantiteNonConforme}
+                      </span>
+                    </td>
                     <td className="py-3 text-zinc-400 text-xs">
                       {new Date(p.createdAt).toLocaleTimeString('fr-FR')}
                     </td>
