@@ -1,189 +1,206 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  BarChart3,
-  Factory,
-  AlertTriangle,
-  Users,
-  Award,
-  ThumbsUp,
-  ThumbsDown,
-  Bell,
-  Monitor,
-} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import axios from '@/lib/axios'
 
-type Widget = {
-  id: number
-  label: string
-  description: string
-  icon: React.ElementType
-  categorie?: string
-  taille?: 'full' | 'half'
+interface OEE {
+  oee: string
+  qualite: string
+  totalProduit: number
+  totalNonConforme: number
 }
 
-const widgets: Widget[] = [
-  { id: 1, label: 'Mini tableau de bord', description: 'Les statistiques généraux', icon: BarChart3, categorie: 'KPIs' },
-  { id: 2, label: 'Production horaire totale', description: 'Taux de production horaire', icon: Factory, categorie: 'KPIs' },
-  { id: 3, label: 'Taux de défauts', description: 'Pourcentage de défaut en production', icon: AlertTriangle, categorie: 'KPIs' },
-  { id: 4, label: 'Détails production par ouvrier', description: 'Liste des ouvriers en production', icon: Users, categorie: 'KPIs' },
-  { id: 5, label: 'Ouvrier du jour', description: 'Meilleure ouvrier en production', icon: Award, categorie: 'Classement' },
-  { id: 6, label: 'Top 5 Ouvriers', description: 'Ouvriers les plus performants', icon: ThumbsUp, categorie: 'Classement' },
-  { id: 7, label: 'Ouvriers les moins performants', description: 'Liste des ouvriers qui ont taux NOK élevées', icon: ThumbsDown, categorie: 'Classement' },
-  { id: 8, label: 'Alertes qualité', description: 'Les importants messages concernant la production', icon: AlertTriangle, categorie: 'Alerts et activité' },
-  { id: 9, label: 'Activité récente', description: 'Derniers activité à l’usine moins importants', icon: Bell, categorie: 'Alerts et activité' },
-  { id: 10, label: 'Statut du poste de travail', description: 'Surveillance en temps réel de tous les postes de travail', icon: Monitor, categorie: 'Activité des postes en temps réel' },
-]
+interface Production {
+  id: number
+  ouvrier: { prenom: string; nom: string; departement: string }
+  quantiteProduite: number
+  quantiteConforme: number
+  quantiteNonConforme: number
+  reference: string
+  createdAt: string
+}
 
-const categories = [...new Set(widgets.map(w => w.categorie))]
+interface OuvrierStat {
+  nom: string
+  produit: number
+  nonConforme: number
+  taux: number
+  departement: string
+}
 
 export default function EcranTV() {
-  const [selectionnes, setSelectionnes] = useState<Widget[]>([
-    { id: 1, label: 'Mini tableau de bord', description: 'Les statistiques généraux', icon: BarChart3, taille: 'full' },
-    { id: 2, label: 'Production horaire totale', description: 'Taux de production horaire', icon: Factory, taille: 'half' },
-    { id: 3, label: 'Taux de défauts', description: 'Pourcentage de défaut en production', icon: AlertTriangle, taille: 'half' },
-    { id: 5, label: 'Ouvrier du jour', description: 'Meilleure ouvrier en production', icon: Award, taille: 'half' },
-    { id: 6, label: 'Top 5 Ouvriers', description: 'Ouvriers les plus performants', icon: ThumbsUp, taille: 'half' },
-  ])
+  const [oee, setOee] = useState<OEE | null>(null)
+  const [top5, setTop5] = useState<OuvrierStat[]>([])
+  const [productions, setProductions] = useState<Production[]>([])
+  const [heure, setHeure] = useState('')
+  const [date, setDate] = useState('')
 
-  const ajouterWidget = (widget: Widget) => {
-    if (!selectionnes.find(w => w.id === widget.id)) {
-      setSelectionnes([...selectionnes, { ...widget, taille: 'half' }])
+  const fetchData = async () => {
+    try {
+      const [oeeRes, prodRes] = await Promise.all([
+        axios.get('/oee'),
+        axios.get('/production'),
+      ])
+      setOee(oeeRes.data)
+      const prods: Production[] = prodRes.data
+
+      setProductions(prods.slice(0, 6))
+
+      const stats: Record<string, OuvrierStat> = {}
+      prods.forEach((p) => {
+        if (!p.ouvrier) return
+        const nom = `${p.ouvrier.prenom} ${p.ouvrier.nom}`
+        if (!stats[nom]) {
+          stats[nom] = { nom, produit: 0, nonConforme: 0, taux: 0, departement: p.ouvrier.departement }
+        }
+        stats[nom].produit += p.quantiteProduite
+        stats[nom].nonConforme += p.quantiteNonConforme
+      })
+
+      Object.values(stats).forEach((s) => {
+        s.taux = s.produit > 0 ? ((s.produit - s.nonConforme) / s.produit) * 100 : 0
+      })
+
+      const sorted = Object.values(stats).sort((a, b) => b.taux - a.taux)
+      setTop5(sorted.slice(0, 5))
+    } catch (err) {
+      console.log('Erreur:', err)
     }
   }
 
-  const retirerWidget = (id: number) => {
-    setSelectionnes(selectionnes.filter(w => w.id !== id))
-  }
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchData()
+    const dataInterval = setInterval(fetchData, 30000)
+
+    const heureInterval = setInterval(() => {
+      const now = new Date()
+      setHeure(now.toLocaleTimeString('fr-FR'))
+      setDate(now.toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }))
+    }, 1000)
+
+    return () => {
+      clearInterval(dataInterval)
+      clearInterval(heureInterval)
+    }
+  }, [])
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="min-h-screen bg-zinc-900 text-white p-6 flex flex-col gap-6">
+
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-zinc-800">Configuration Ecran TV</h2>
-          <p className="text-sm text-zinc-500">
-            Personnalisez le contenu dynamique pour les écrans de télévision d&apos;usine
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="border border-zinc-300 text-zinc-600 px-4 py-2 rounded-lg text-sm hover:bg-zinc-50 flex items-center gap-2">
-             Enregistrer la mise en page
-          </button>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2">
-             Diffuser à la télévision
-          </button>
-          <div className="flex items-center gap-2 ml-4">
-            <span className="text-sm text-zinc-500">Mode aperçu</span>
-            <div className="w-10 h-5 bg-zinc-200 rounded-full cursor-pointer"></div>
+      <div className="flex justify-between items-center bg-zinc-800 rounded-2xl px-8 py-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+            <span className="text-white font-bold text-xl">P</span>
+          </div>
+          <div>
+            <p className="text-xl font-bold text-white">Smart Production Counter</p>
+            <p className="text-sm text-zinc-400">Surveillance en temps réel</p>
           </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-6">
-        {/* Bibliothèque de widgets */}
-        <div className="col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Bibliothèque de widgets</CardTitle>
-              <p className="text-xs text-zinc-500">
-                Cliquez sur un widget pour l’ajouter à la zone de travail
-              </p>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              {categories.map(categorie => (
-                <div key={categorie}>
-                  <p className="text-xs font-semibold text-zinc-600 mb-2">{categorie}</p>
-                  <div className="flex flex-col gap-2">
-                    {widgets
-                      .filter(w => w.categorie === categorie)
-                      .map(widget => (
-                        <div
-                          key={widget.id}
-                          onClick={() => ajouterWidget(widget)}
-                          className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition ${
-                            selectionnes.find(w => w.id === widget.id)
-                              ? 'border-blue-400 bg-blue-50'
-                              : 'hover:bg-zinc-50'
-                          }`}
-                        >
-                          <widget.icon className="w-5 h-5 text-blue-600" />
-                          <div>
-                            <p className="text-sm font-medium text-zinc-700">{widget.label}</p>
-                            <p className="text-xs text-zinc-400">{widget.description}</p>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Disposition écran TV */}
-        <div className="col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Disposition de l&apos;écran de télévision</CardTitle>
-              <p className="text-xs text-zinc-500">
-                Disposez les widgets pour créer l&apos;affichage souhaité
-              </p>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {/* Widget pleine largeur */}
-              {selectionnes.filter(w => w.taille === 'full').map(widget => (
-                <div key={widget.id} className="border rounded-lg p-4 relative bg-zinc-50">
-                  <button
-                    onClick={() => retirerWidget(widget.id)}
-                    className="absolute top-2 right-2 text-zinc-400 hover:text-red-500 text-xs"
-                  >
-                    ✕
-                  </button>
-                  <div className="flex items-center gap-2 justify-center py-4">
-                    <widget.icon className="w-6 h-6 text-blue-600" />
-                    <div>
-                      <p className="font-medium text-zinc-700">{widget.label}</p>
-                      <p className="text-zinc-400 text-xs">{widget.description}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Widgets demi largeur */}
-              <div className="grid grid-cols-2 gap-3">
-                {selectionnes.filter(w => w.taille === 'half').map(widget => (
-                  <div key={widget.id} className="border rounded-lg p-4 relative bg-zinc-50 min-h-24">
-                    <button
-                      onClick={() => retirerWidget(widget.id)}
-                      className="absolute top-2 right-2 text-zinc-400 hover:text-red-500 text-xs"
-                    >
-                      ✕
-                    </button>
-                    <div className="flex flex-col gap-1 mt-4">
-                      <widget.icon className="w-6 h-6 text-blue-600" />
-                      <p className="font-medium text-zinc-700 text-sm">{widget.label}</p>
-                      <p className="text-zinc-400 text-xs">{widget.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Activer deuxième affichage */}
-              <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                <div>
-                  <p className="text-sm font-medium text-zinc-700">Afficher sur un deuxième écran</p>
-                  <p className="text-xs text-zinc-500">Affichez une version simplifiée pour les écrans de télévision d’usine</p>
-                </div>
-                <button className="border border-zinc-300 text-zinc-600 px-4 py-2 rounded-lg text-sm hover:bg-zinc-50 flex items-center gap-2">
-                   Activer le mode TV
-                </button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="text-right">
+          <p className="text-3xl font-mono font-bold text-blue-400">{heure}</p>
+          <p className="text-sm text-zinc-400 capitalize">{date}</p>
         </div>
       </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-zinc-800 rounded-2xl p-6 text-center border border-zinc-700">
+          <p className="text-zinc-400 text-sm uppercase tracking-widest mb-2">OEE Global</p>
+          <p className="text-5xl font-bold text-blue-400">{oee?.oee ?? '—'}</p>
+        </div>
+        <div className="bg-zinc-800 rounded-2xl p-6 text-center border border-zinc-700">
+          <p className="text-zinc-400 text-sm uppercase tracking-widest mb-2">Total Produit</p>
+          <p className="text-5xl font-bold text-white">{oee?.totalProduit ?? '—'}</p>
+        </div>
+        <div className="bg-zinc-800 rounded-2xl p-6 text-center border border-zinc-700">
+          <p className="text-zinc-400 text-sm uppercase tracking-widest mb-2">Qualité</p>
+          <p className="text-5xl font-bold text-emerald-400">{oee?.qualite ?? '—'}</p>
+        </div>
+        <div className="bg-zinc-800 rounded-2xl p-6 text-center border border-zinc-700">
+          <p className="text-zinc-400 text-sm uppercase tracking-widest mb-2">Non Conformes</p>
+          <p className="text-5xl font-bold text-red-400">{oee?.totalNonConforme ?? '—'}</p>
+        </div>
+      </div>
+
+      {/* TOP 5 + Productions récentes */}
+      <div className="grid grid-cols-2 gap-4 flex-1">
+
+        {/* TOP 5 */}
+        <div className="bg-zinc-800 rounded-2xl p-6 border border-zinc-700">
+          <p className="text-lg font-bold text-yellow-400 mb-4">🏆 TOP 5 — Les plus performants</p>
+          <div className="flex flex-col gap-3">
+            {top5.map((o, i) => (
+              <div key={i} className="flex items-center justify-between bg-zinc-700 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className={`text-2xl font-bold ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-zinc-300' : i === 2 ? 'text-orange-400' : 'text-zinc-500'}`}>
+                    #{i + 1}
+                  </span>
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-bold">
+                      {o.nom.split(' ').map(n => n[0]).join('')}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white">{o.nom}</p>
+                    <p className="text-xs text-zinc-400">{o.departement}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-emerald-400">{o.taux.toFixed(1)}%</p>
+                  <p className="text-xs text-zinc-400">{o.produit} prod.</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Productions récentes */}
+        <div className="bg-zinc-800 rounded-2xl p-6 border border-zinc-700">
+          <p className="text-lg font-bold text-blue-400 mb-4">⚡ Productions récentes</p>
+          <div className="flex flex-col gap-3">
+            {productions.map((p) => (
+              <div key={p.id} className="flex items-center justify-between bg-zinc-700 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-zinc-600 rounded-full flex items-center justify-center">
+                    <span className="text-zinc-300 text-xs font-bold">
+                      {p.ouvrier?.prenom?.[0]}{p.ouvrier?.nom?.[0]}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white">{p.ouvrier?.prenom} {p.ouvrier?.nom}</p>
+                    <p className="text-xs text-zinc-400">{p.reference}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-white">{p.quantiteProduite} pcs</p>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${p.quantiteNonConforme === 0 ? 'bg-emerald-900 text-emerald-400' : 'bg-red-900 text-red-400'}`}>
+                    {p.quantiteNonConforme === 0 ? '✅ OK' : `❌ ${p.quantiteNonConforme} NOK`}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Footer */}
+      <div className="bg-zinc-800 rounded-2xl px-8 py-3 flex justify-between items-center border border-zinc-700">
+        <p className="text-zinc-500 text-sm">Données actualisées toutes les 30 secondes</p>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+          <p className="text-emerald-400 text-sm font-medium">Système actif</p>
+        </div>
+      </div>
+
     </div>
-    )
+  )
 }
