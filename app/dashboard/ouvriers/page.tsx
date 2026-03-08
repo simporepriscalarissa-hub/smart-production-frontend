@@ -190,7 +190,18 @@ export default function Ouvriers() {
                     <span className="bg-zinc-50 text-zinc-600 px-3 py-1 rounded-full text-xs border border-zinc-200">{o.rfid}</span>
                   </td>
                   <td className="py-3">
-                    <Badge className="bg-green-100 text-green-700">Actif</Badge>
+                   {(() => {
+  const heure = new Date().getHours()
+  const actif = heure >= 8 && heure < 17
+  return (
+    <Badge className={actif
+      ? "bg-green-100 text-green-700"
+      : "bg-zinc-100 text-zinc-500"
+    }>
+      {actif ? '🟢 Actif' : '⚫ Inactif'}
+    </Badge>
+  )
+})()}
                   </td>
                   {user?.role === 'admin' && (
                     <td className="py-3">
