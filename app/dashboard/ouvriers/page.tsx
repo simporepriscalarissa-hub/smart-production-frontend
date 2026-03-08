@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import axios from '@/lib/axios'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { APP_CONFIG } from '@/lib/config'
+import { UserPlus, Trash2, Users, CreditCard, Building2 } from 'lucide-react'
 
 interface Ouvrier {
   id: number
@@ -28,13 +28,7 @@ export default function Ouvriers() {
   const [showForm, setShowForm] = useState(false)
   const [message, setMessage] = useState('')
   const [user, setUser] = useState<User | null>(null)
-  const [form, setForm] = useState({
-    nom: '',
-    prenom: '',
-    telephone: '',
-    rfid: '',
-    departement: '',
-  })
+  const [form, setForm] = useState({ nom: '', prenom: '', telephone: '', rfid: '', departement: '' })
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -48,7 +42,7 @@ export default function Ouvriers() {
 
   const fetchOuvriers = async (currentUser: User) => {
     try {
-      let url = `/ouvriers`
+      let url = '/ouvriers'
       if (currentUser.role === 'superviseur' && currentUser.departement) {
         url += `?departement=${currentUser.departement}`
       }
@@ -61,11 +55,12 @@ export default function Ouvriers() {
 
   const ajouterOuvrier = async () => {
     try {
-      await axios.post(`/ouvriers`, form)
-      setMessage('Ouvrier ajouté !')
+      await axios.post('/ouvriers', form)
+      setMessage('Ouvrier ajouté avec succès !')
       setForm({ nom: '', prenom: '', telephone: '', rfid: '', departement: '' })
       setShowForm(false)
       if (user) fetchOuvriers(user)
+      setTimeout(() => setMessage(''), 3000)
     } catch (err) {
       console.log('Erreur:', err)
     }
@@ -82,98 +77,163 @@ export default function Ouvriers() {
     }
   }
 
+  const isActif = new Date().getHours() >= 8 && new Date().getHours() < 17
+
+  const deptColors: Record<string, string> = {
+    'Coupe': 'bg-blue-100 text-blue-700',
+    'Couture': 'bg-purple-100 text-purple-700',
+    'Lavage': 'bg-cyan-100 text-cyan-700',
+    'Finition': 'bg-orange-100 text-orange-700',
+    'Contrôle Qualité': 'bg-emerald-100 text-emerald-700',
+    'Emballage': 'bg-pink-100 text-pink-700',
+  }
+
   return (
     <div className="flex flex-col gap-6">
 
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-zinc-800">Gestion des Ouvriers</h2>
-          <p className="text-sm text-zinc-500">
-            {user?.role === 'superviseur'
-              ? `Département : ${user.departement}`
-              : 'Tous les départements'
-            }
+          <p className="text-sm text-zinc-500 flex items-center gap-1.5">
+            <Building2 size={14} />
+            {user?.role === 'superviseur' ? `Département : ${user.departement}` : 'Tous les départements'}
           </p>
         </div>
         {user?.role === 'admin' && (
           <button
             onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 text-sm"
+            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 text-sm font-medium transition-colors"
           >
-            + Ajouter un ouvrier
+            <UserPlus size={16} />
+            Ajouter un ouvrier
           </button>
         )}
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <Card className="border-0 shadow-sm bg-zinc-50">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-zinc-500 uppercase tracking-wide font-semibold">Total ouvriers</p>
+                <p className="text-3xl font-bold text-zinc-800 mt-1">{ouvriers.length}</p>
+              </div>
+              <div className="w-10 h-10 bg-zinc-200 rounded-xl flex items-center justify-center">
+                <Users size={20} className="text-zinc-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm bg-emerald-50">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-emerald-500 uppercase tracking-wide font-semibold">Actifs maintenant</p>
+                <p className="text-3xl font-bold text-emerald-700 mt-1">{isActif ? ouvriers.length : 0}</p>
+              </div>
+              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <Users size={20} className="text-emerald-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm bg-blue-50">
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-blue-500 uppercase tracking-wide font-semibold">Badges RFID</p>
+                <p className="text-3xl font-bold text-blue-700 mt-1">{ouvriers.filter(o => o.rfid).length}</p>
+              </div>
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <CreditCard size={20} className="text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Message */}
       {message && (
-        <div className="bg-green-100 text-green-700 p-4 rounded-lg text-sm">
-          ✅ {message}
+        <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 p-4 rounded-xl text-sm flex items-center gap-2">
+          <span>✅</span> {message}
         </div>
       )}
 
+      {/* Formulaire */}
       {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Nouvel ouvrier</CardTitle>
+        <Card className="border border-blue-100 shadow-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <UserPlus size={18} className="text-blue-600" />
+              <CardTitle className="text-base">Nouvel ouvrier</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-zinc-600 mb-1 block">Nom</label>
-                <input type="text" value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Nom" />
-              </div>
-              <div>
-                <label className="text-sm text-zinc-600 mb-1 block">Prénom</label>
-                <input type="text" value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Prénom" />
-              </div>
-              <div>
-                <label className="text-sm text-zinc-600 mb-1 block">Téléphone</label>
-                <input type="text" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Téléphone" />
-              </div>
-              <div>
-                <label className="text-sm text-zinc-600 mb-1 block">RFID</label>
-                <input type="text" value={form.rfid} onChange={(e) => setForm({ ...form, rfid: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Identifiant RFID" />
-              </div>
-              <div>
-                <label className="text-sm text-zinc-600 mb-1 block">Département</label>
-                <select value={form.departement} onChange={(e) => setForm({ ...form, departement: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm">
+              {[
+                { label: 'Nom', key: 'nom', placeholder: 'Nom de famille' },
+                { label: 'Prénom', key: 'prenom', placeholder: 'Prénom' },
+                { label: 'Téléphone', key: 'telephone', placeholder: '2X XXX XXX' },
+                { label: 'Badge RFID', key: 'rfid', placeholder: 'RF001' },
+              ].map(({ label, key, placeholder }) => (
+                <div key={key}>
+                  <label className="text-sm text-zinc-600 mb-1.5 block font-medium">{label}</label>
+                  <input
+                    type="text"
+                    value={form[key as keyof typeof form]}
+                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                    placeholder={placeholder}
+                    className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+              <div className="col-span-2">
+                <label className="text-sm text-zinc-600 mb-1.5 block font-medium">Département</label>
+                <select
+                  value={form.departement}
+                  onChange={(e) => setForm({ ...form, departement: e.target.value })}
+                  className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
                   <option value="">Sélectionner un département</option>
-                  <option value="Coupe">Coupe</option>
-                  <option value="Couture">Couture</option>
-                  <option value="Lavage">Lavage</option>
-                  <option value="Finition">Finition</option>
-                  <option value="Contrôle Qualité">Contrôle Qualité</option>
-                  <option value="Emballage">Emballage</option>
+                  {['Coupe', 'Couture', 'Lavage', 'Finition', 'Contrôle Qualité', 'Emballage'].map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
                 </select>
               </div>
             </div>
-            <div className="flex gap-3 mt-4">
-              <button onClick={ajouterOuvrier} className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-green-700">Enregistrer</button>
-              <button onClick={() => setShowForm(false)} className="bg-zinc-400 text-white px-6 py-2 rounded-lg text-sm">Annuler</button>
+            <div className="flex gap-3 mt-5">
+              <button onClick={ajouterOuvrier} className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl text-sm hover:bg-emerald-700 font-medium">Enregistrer</button>
+              <button onClick={() => setShowForm(false)} className="bg-zinc-100 text-zinc-600 px-6 py-2.5 rounded-xl text-sm hover:bg-zinc-200 font-medium">Annuler</button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Liste des ouvriers ({ouvriers.length})</CardTitle>
+      {/* Tableau */}
+      <Card className="shadow-sm border border-zinc-100">
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <Users size={18} className="text-zinc-600" />
+            <CardTitle className="text-base">Liste des ouvriers ({ouvriers.length})</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-zinc-500">
-                <th className="text-left py-2">Ouvrier</th>
-                <th className="text-left py-2">Département</th>
-                <th className="text-left py-2">Téléphone</th>
-                <th className="text-left py-2">RFID</th>
-                <th className="text-left py-2">Statut</th>
-                {user?.role === 'admin' && <th className="text-left py-2">Actions</th>}
+              <tr className="border-b text-zinc-400">
+                <th className="text-left py-3 font-medium">Ouvrier</th>
+                <th className="text-left py-3 font-medium">Département</th>
+                <th className="text-left py-3 font-medium">Téléphone</th>
+                <th className="text-left py-3 font-medium">Badge RFID</th>
+                <th className="text-left py-3 font-medium">Statut</th>
+                {user?.role === 'admin' && <th className="text-left py-3 font-medium">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {ouvriers.map((o) => (
-                <tr key={o.id} className="border-b hover:bg-zinc-50">
+                <tr key={o.id} className="border-b hover:bg-zinc-50 transition-colors">
                   <td className="py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 bg-zinc-100 rounded-full flex items-center justify-center">
@@ -183,29 +243,31 @@ export default function Ouvriers() {
                     </div>
                   </td>
                   <td className="py-3">
-                    <Badge className="bg-blue-50 text-blue-600 border border-blue-100">{o.departement ?? '—'}</Badge>
+                    <Badge className={`${deptColors[o.departement] ?? 'bg-zinc-100 text-zinc-600'} hover:opacity-90`}>
+                      {o.departement ?? '—'}
+                    </Badge>
                   </td>
                   <td className="py-3 text-zinc-500">{o.telephone}</td>
                   <td className="py-3">
-                    <span className="bg-zinc-50 text-zinc-600 px-3 py-1 rounded-full text-xs border border-zinc-200">{o.rfid}</span>
+                    <div className="flex items-center gap-1.5">
+                      <CreditCard size={13} className="text-zinc-400" />
+                      <span className="bg-zinc-50 text-zinc-600 px-2 py-1 rounded-lg text-xs border border-zinc-200">{o.rfid}</span>
+                    </div>
                   </td>
                   <td className="py-3">
-                   {(() => {
-  const heure = new Date().getHours()
-  const actif = heure >= 8 && heure < 17
-  return (
-    <Badge className={actif
-      ? "bg-green-100 text-green-700"
-      : "bg-zinc-100 text-zinc-500"
-    }>
-      {actif ? '🟢 Actif' : '⚫ Inactif'}
-    </Badge>
-  )
-})()}
+                    <Badge className={isActif ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-100'}>
+                      {isActif ? '🟢 Actif' : '⚫ Inactif'}
+                    </Badge>
                   </td>
                   {user?.role === 'admin' && (
                     <td className="py-3">
-                      <button onClick={() => supprimerOuvrier(o.id)} className="text-red-500 hover:text-red-700 text-xs border border-red-200 px-3 py-1 rounded hover:bg-red-50">Supprimer</button>
+                      <button
+                        onClick={() => supprimerOuvrier(o.id)}
+                        className="flex items-center gap-1.5 text-red-500 hover:text-red-700 text-xs border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 size={12} />
+                        Supprimer
+                      </button>
                     </td>
                   )}
                 </tr>
