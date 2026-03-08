@@ -15,5 +15,5 @@ export const APP_CONFIG = {
   unite: 'produits',
   
   // API URL
-  apiUrl: 'http://localhost:3001',
+  apiUrl: 'https://smart-production-backend.onrender.com',
 }
