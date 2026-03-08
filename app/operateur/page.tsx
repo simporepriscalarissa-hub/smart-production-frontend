@@ -90,7 +90,18 @@ export default function Operateur() {
                 <p className="font-bold text-zinc-800 text-lg">{user.prenom} {user.nom}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                  <p className="text-xs text-emerald-600 font-medium">En service</p>
+                 {(() => {
+  const heure = new Date().getHours()
+  const actif = heure >= 8 && heure < 17
+  return (
+    <Badge className={actif
+      ? "bg-green-100 text-green-700"
+      : "bg-zinc-100 text-zinc-500"
+    }>
+      {actif ? '🟢 Actif' : '⚫ Inactif'}
+    </Badge>
+  )
+})()}
                 </div>
               </div>
             </div>
