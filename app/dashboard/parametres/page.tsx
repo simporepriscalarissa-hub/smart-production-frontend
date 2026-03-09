@@ -228,22 +228,21 @@ export default function Parametres() {
           </div>
 
           <div className="flex gap-3">
-            <button
-              onClick={sauvegarderTV}
-              className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm hover:bg-blue-700 font-medium transition-colors"
-            >
-              <Save size={15} />
-              Sauvegarder la configuration TV
-            </button>
-            
-              href=&quot;/dashboard/ecran-tv&quot;
-              target=&quot;_blank&quot;
-              className=&quot;flex items-center gap-2 bg-zinc-800 text-white px-5 py-2.5 rounded-xl text-sm hover:bg-zinc-900 font-medium transition-colors&quot; 
-              
-              <Monitor size={15} />
-              Ouvrir l&apos;écran TV
-            
-          </div>
+  <button
+    onClick={sauvegarderTV}
+    className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm hover:bg-blue-700 font-medium transition-colors"
+  >
+    <Save size={15} />
+    Sauvegarder la configuration TV
+  </button>
+  <button
+    onClick={() => window.open('/dashboard/ecran-tv', '_blank')}
+    className="flex items-center gap-2 bg-zinc-800 text-white px-5 py-2.5 rounded-xl text-sm hover:bg-zinc-900 font-medium transition-colors"
+  >
+    <Monitor size={15} />
+    Ouvrir l&apos;écran TV
+  </button>
+</div>
 
         </CardContent>
       </Card>
