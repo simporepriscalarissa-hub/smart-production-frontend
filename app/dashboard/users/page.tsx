@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import axios from '@/lib/axios'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { UserPlus, Trash2, Users, Shield, User } from 'lucide-react'
+import { UserPlus, Trash2, Users, Shield, User, AlertTriangle, X } from 'lucide-react'
 
-interface User {
+interface UserType {
   id: number
   nom: string
   prenom: string
@@ -15,10 +15,86 @@ interface User {
   departement?: string
 }
 
+// Popup de confirmation
+function ConfirmModal({
+  message,
+  onConfirm,
+  onCancel,
+}: {
+  message: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+            <AlertTriangle size={20} className="text-red-600" />
+          </div>
+          <h3 className="font-bold text-zinc-800">Confirmation</h3>
+        </div>
+        <p className="text-sm text-zinc-600 mb-6">{message}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={onConfirm}
+            className="flex-1 bg-red-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
+          >
+            Supprimer
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 bg-zinc-100 text-zinc-600 py-2.5 rounded-xl text-sm font-medium hover:bg-zinc-200 transition-colors"
+          >
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Popup d'erreur
+function ErrorModal({
+  message,
+  onClose,
+}: {
+  message: string
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+              <AlertTriangle size={20} className="text-orange-600" />
+            </div>
+            <h3 className="font-bold text-zinc-800">Action impossible</h3>
+          </div>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
+            <X size={18} />
+          </button>
+        </div>
+        <p className="text-sm text-zinc-600 mb-5">{message}</p>
+        <button
+          onClick={onClose}
+          className="w-full bg-zinc-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-zinc-900 transition-colors"
+        >
+          Compris
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([])
+  const [users, setUsers] = useState<UserType[]>([])
   const [showForm, setShowForm] = useState(false)
   const [message, setMessage] = useState('')
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null)
+  const [confirmId, setConfirmId] = useState<number | null>(null)
+  const [errorMsg, setErrorMsg] = useState('')
   const [form, setForm] = useState({
     nom: '', prenom: '', email: '', password: '', role: 'superviseur', departement: '',
   })
@@ -26,6 +102,10 @@ export default function UsersPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/immutability
     fetchUsers()
+    const userData = localStorage.getItem('user')
+    if (userData && userData !== 'undefined') {
+      setCurrentUser(JSON.parse(userData))
+    }
   }, [])
 
   const fetchUsers = async () => {
@@ -50,14 +130,30 @@ export default function UsersPage() {
     }
   }
 
-  const supprimerUser = async (id: number) => {
-    if (confirm('Supprimer cet utilisateur ?')) {
-      try {
-        await axios.delete(`/users/${id}`)
-        setUsers(users.filter(u => u.id !== id))
-      } catch (err) {
-        console.log('Erreur:', err)
-      }
+  const demanderSuppression = (u: UserType) => {
+    // Protection 1 — Ne pas supprimer son propre profil
+    if (currentUser && u.id === currentUser.id) {
+      setErrorMsg('Vous ne pouvez pas supprimer votre propre profil !')
+      return
+    }
+    // Protection 2 — Ne pas supprimer un admin
+    if (u.role === 'admin') {
+      setErrorMsg('Vous ne pouvez pas supprimer un administrateur !')
+      return
+    }
+    // Sinon ouvrir la popup de confirmation
+    setConfirmId(u.id)
+  }
+
+  const confirmerSuppression = async () => {
+    if (!confirmId) return
+    try {
+      await axios.delete(`/users/${confirmId}`)
+      setUsers(users.filter(u => u.id !== confirmId))
+      setConfirmId(null)
+    } catch (err) {
+      console.log('Erreur:', err)
+      setConfirmId(null)
     }
   }
 
@@ -66,6 +162,21 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
+
+      {/* Popups */}
+      {confirmId && (
+        <ConfirmModal
+          message={`Voulez vous vraiment supprimer cet utilisateur ? Cette action est irréversible.`}
+          onConfirm={confirmerSuppression}
+          onCancel={() => setConfirmId(null)}
+        />
+      )}
+      {errorMsg && (
+        <ErrorModal
+          message={errorMsg}
+          onClose={() => setErrorMsg('')}
+        />
+      )}
 
       {/* Header */}
       <div className="flex justify-between items-center">
@@ -128,7 +239,7 @@ export default function UsersPage() {
       {/* Message succès */}
       {message && (
         <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 p-4 rounded-xl text-sm flex items-center gap-2">
-          <span className="text-lg">✅</span> {message}
+          <span>✅</span> {message}
         </div>
       )}
 
@@ -217,44 +328,58 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b hover:bg-zinc-50 transition-colors">
-                  <td className="py-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center ${u.role === 'admin' ? 'bg-red-100' : 'bg-blue-100'}`}>
-                        <span className={`font-bold text-xs ${u.role === 'admin' ? 'text-red-600' : 'text-blue-600'}`}>
-                          {u.prenom[0]}{u.nom[0]}
-                        </span>
+              {users.map((u) => {
+                const isMe = currentUser?.id === u.id
+                const isAdmin = u.role === 'admin'
+                const canDelete = !isMe && !isAdmin
+                return (
+                  <tr key={u.id} className="border-b hover:bg-zinc-50 transition-colors">
+                    <td className="py-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center ${isMe ? 'bg-emerald-100' : u.role === 'admin' ? 'bg-red-100' : 'bg-blue-100'}`}>
+                          <span className={`font-bold text-xs ${isMe ? 'text-emerald-600' : u.role === 'admin' ? 'text-red-600' : 'text-blue-600'}`}>
+                            {u.prenom[0]}{u.nom[0]}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{u.prenom} {u.nom}</p>
+                          {isMe && <p className="text-xs text-emerald-500">C&apos;est vous</p>}
+                        </div>
                       </div>
-                      <p className="font-medium">{u.prenom} {u.nom}</p>
-                    </div>
-                  </td>
-                  <td className="py-3 text-zinc-500">{u.email}</td>
-                  <td className="py-3">
-                    <Badge className={u.role === 'admin'
-                      ? 'bg-red-100 text-red-700 hover:bg-red-100'
-                      : 'bg-blue-100 text-blue-700 hover:bg-blue-100'
-                    }>
-                      {u.role === 'admin' ? '🔴 Admin' : '🔵 Superviseur'}
-                    </Badge>
-                  </td>
-                  <td className="py-3">
-                    {u.departement
-                      ? <Badge className="bg-zinc-100 text-zinc-600 hover:bg-zinc-100">{u.departement}</Badge>
-                      : <span className="text-zinc-400">—</span>
-                    }
-                  </td>
-                  <td className="py-3">
-                    <button
-                      onClick={() => supprimerUser(u.id)}
-                      className="flex items-center gap-1.5 text-red-500 hover:text-red-700 text-xs border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                    >
-                      <Trash2 size={12} />
-                      Supprimer
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-3 text-zinc-500">{u.email}</td>
+                    <td className="py-3">
+                      <Badge className={u.role === 'admin'
+                        ? 'bg-red-100 text-red-700 hover:bg-red-100'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-100'
+                      }>
+                        {u.role === 'admin' ? '🔴 Admin' : '🔵 Superviseur'}
+                      </Badge>
+                    </td>
+                    <td className="py-3">
+                      {u.departement
+                        ? <Badge className="bg-zinc-100 text-zinc-600 hover:bg-zinc-100">{u.departement}</Badge>
+                        : <span className="text-zinc-400">—</span>
+                      }
+                    </td>
+                    <td className="py-3">
+                      {canDelete ? (
+                        <button
+                          onClick={() => demanderSuppression(u)}
+                          className="flex items-center gap-1.5 text-red-500 hover:text-red-700 text-xs border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 size={12} />
+                          Supprimer
+                        </button>
+                      ) : (
+                        <span className="text-xs text-zinc-300 italic">
+                          {isMe ? 'Votre compte' : 'Protégé'}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </CardContent>
