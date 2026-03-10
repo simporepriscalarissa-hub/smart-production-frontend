@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import axios from 'axios'
 import { APP_CONFIG } from '@/lib/config'
-import { Mail, Lock, LogIn, AlertCircle } from 'lucide-react'
+import { Mail, Lock, LogIn, AlertCircle, BarChart2, Users, Wifi, Tv } from 'lucide-react'
 import Image from 'next/image'
 
 export default function Login() {
@@ -50,15 +50,17 @@ export default function Login() {
           <p className="text-blue-200 text-lg">
             Suivi en temps réel de votre production industrielle
           </p>
-          <div className="mt-10 flex flex-col gap-4">
+          <div className="mt-10 flex flex-col gap-5">
             {[
-              { icon: '📊', text: 'Dashboard OEE en temps réel' },
-              { icon: '👷', text: 'Gestion des ouvriers par département' },
-              { icon: '📡', text: 'Connexion RFID pour les opérateurs' },
-              { icon: '📺', text: 'Écran TV pour affichage en usine' },
-            ].map(({ icon, text }) => (
-              <div key={text} className="flex items-center gap-3">
-                <span className="text-2xl">{icon}</span>
+              { icon: BarChart2, text: 'Dashboard OEE en temps réel' },
+              { icon: Users, text: 'Gestion des ouvriers par département' },
+              { icon: Wifi, text: 'Connexion RFID pour les opérateurs' },
+              { icon: Tv, text: 'Écran TV pour affichage en usine' },
+            ].map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-4">
+                <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Icon size={18} className="text-white" />
+                </div>
                 <span className="text-blue-100 text-sm">{text}</span>
               </div>
             ))}
@@ -147,15 +149,6 @@ export default function Login() {
               )}
             </button>
 
-          </div>
-
-          {/* Lien opérateur */}
-          <div className="mt-8 p-4 bg-white rounded-xl border border-zinc-100 text-center">
-            <p className="text-xs text-zinc-500 mb-2">Vous êtes un opérateur terrain ?</p>
-            <a href="/rfid-login" className="flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
-              <span>📡</span>
-              Connexion via badge RFID
-            </a>
           </div>
 
         </div>
