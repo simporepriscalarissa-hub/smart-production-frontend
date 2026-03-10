@@ -111,14 +111,6 @@ export default function SidebarContent() {
           })}
         </div>
 
-        {/* Info superviseur en lecture seule */}
-        {user?.role === 'superviseur' && (
-          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
-            <p className="text-xs text-amber-700 font-medium"></p>
-            <p className="text-xs text-amber-600 mt-0.5"></p>
-          </div>
-        )}
-
       </ScrollArea>
 
       {/* Footer utilisateur */}
