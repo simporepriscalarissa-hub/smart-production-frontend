@@ -13,6 +13,7 @@ interface Ouvrier {
   telephone: string
   rfid: string
   departement: string
+  dernierePresence?: string
 }
 
 interface User {
@@ -47,6 +48,17 @@ function ConfirmModal({ nom, onConfirm, onCancel }: { nom: string; onConfirm: ()
         </div>
       </div>
     </div>
+  )
+}
+
+const estActifAujourdhui = (o: Ouvrier): boolean => {
+  if (!o.dernierePresence) return false
+  const aujourdhui = new Date()
+  const presence = new Date(o.dernierePresence)
+  return (
+    presence.getDate() === aujourdhui.getDate() &&
+    presence.getMonth() === aujourdhui.getMonth() &&
+    presence.getFullYear() === aujourdhui.getFullYear()
   )
 }
 
@@ -106,8 +118,6 @@ export default function Ouvriers() {
     }
   }
 
-  const isActif = new Date().getHours() >= 8 && new Date().getHours() < 17
-
   const deptColors: Record<string, string> = {
     'Coupe': 'bg-blue-100 text-blue-700',
     'Couture': 'bg-purple-100 text-purple-700',
@@ -118,6 +128,7 @@ export default function Ouvriers() {
   }
 
   const titreHeader = user?.role === 'superviseur' ? 'Liste des Ouvriers' : 'Gestion des Ouvriers'
+  const nbActifs = ouvriers.filter(o => estActifAujourdhui(o)).length
 
   return (
     <div className="flex flex-col gap-6">
@@ -170,8 +181,8 @@ export default function Ouvriers() {
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-emerald-500 uppercase tracking-wide font-semibold">Actifs maintenant</p>
-                <p className="text-3xl font-bold text-emerald-700 mt-1">{isActif ? ouvriers.length : 0}</p>
+                <p className="text-xs text-emerald-500 uppercase tracking-wide font-semibold">Actifs aujourd&apos;hui</p>
+                <p className="text-3xl font-bold text-emerald-700 mt-1">{nbActifs}</p>
               </div>
               <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
                 <Users size={20} className="text-emerald-600" />
@@ -279,7 +290,14 @@ export default function Ouvriers() {
                       <div className="w-9 h-9 bg-zinc-100 rounded-full flex items-center justify-center">
                         <span className="text-zinc-600 font-bold text-xs">{o.prenom[0]}{o.nom[0]}</span>
                       </div>
-                      <p className="font-medium">{o.prenom} {o.nom}</p>
+                      <div>
+                        <p className="font-medium">{o.prenom} {o.nom}</p>
+                        {o.dernierePresence && (
+                          <p className="text-xs text-zinc-400">
+                            Dernière présence : {new Date(o.dernierePresence).toLocaleTimeString('fr-FR')}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="py-3">
@@ -295,8 +313,8 @@ export default function Ouvriers() {
                     </div>
                   </td>
                   <td className="py-3">
-                    <Badge className={isActif ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-100'}>
-                      {isActif ? '🟢 Actif' : '⚫ Inactif'}
+                    <Badge className={estActifAujourdhui(o) ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-100'}>
+                      {estActifAujourdhui(o) ? '🟢 Actif' : '⚫ Inactif'}
                     </Badge>
                   </td>
                   {user?.role === 'admin' && (
