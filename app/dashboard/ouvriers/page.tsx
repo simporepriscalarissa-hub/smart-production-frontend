@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import axios from '@/lib/axios'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { UserPlus, Trash2, Users, CreditCard, Building2 } from 'lucide-react'
+import { UserPlus, Trash2, Users, CreditCard, Building2, AlertTriangle, X } from 'lucide-react'
 
 interface Ouvrier {
   id: number
@@ -23,11 +23,39 @@ interface User {
   departement?: string
 }
 
+function ConfirmModal({ nom, onConfirm, onCancel }: { nom: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+            <AlertTriangle size={20} className="text-red-600" />
+          </div>
+          <h3 className="font-bold text-zinc-800">Supprimer l&apos;ouvrier</h3>
+          <button onClick={onCancel} className="ml-auto text-zinc-400 hover:text-zinc-600"><X size={18} /></button>
+        </div>
+        <p className="text-sm text-zinc-600 mb-2">Voulez vous vraiment supprimer :</p>
+        <p className="text-sm font-bold text-zinc-800 bg-zinc-50 px-4 py-2 rounded-xl mb-5">{nom}</p>
+        <p className="text-xs text-red-500 mb-5">⚠️ Cette action est irréversible. Toutes les données de production liées seront perdues.</p>
+        <div className="flex gap-3">
+          <button onClick={onConfirm} className="flex-1 bg-red-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 transition-colors">
+            Supprimer
+          </button>
+          <button onClick={onCancel} className="flex-1 bg-zinc-100 text-zinc-600 py-2.5 rounded-xl text-sm font-medium hover:bg-zinc-200 transition-colors">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Ouvriers() {
   const [ouvriers, setOuvriers] = useState<Ouvrier[]>([])
   const [showForm, setShowForm] = useState(false)
   const [message, setMessage] = useState('')
   const [user, setUser] = useState<User | null>(null)
+  const [confirmOuvrier, setConfirmOuvrier] = useState<Ouvrier | null>(null)
   const [form, setForm] = useState({ nom: '', prenom: '', telephone: '', rfid: '', departement: '' })
 
   useEffect(() => {
@@ -66,14 +94,15 @@ export default function Ouvriers() {
     }
   }
 
-  const supprimerOuvrier = async (id: number) => {
-    if (confirm('Supprimer cet ouvrier ?')) {
-      try {
-        await axios.delete(`/ouvriers/${id}`)
-        setOuvriers(ouvriers.filter(o => o.id !== id))
-      } catch (err) {
-        console.log('Erreur:', err)
-      }
+  const confirmerSuppression = async () => {
+    if (!confirmOuvrier) return
+    try {
+      await axios.delete(`/ouvriers/${confirmOuvrier.id}`)
+      setOuvriers(ouvriers.filter(o => o.id !== confirmOuvrier.id))
+      setConfirmOuvrier(null)
+    } catch (err) {
+      console.log('Erreur:', err)
+      setConfirmOuvrier(null)
     }
   }
 
@@ -88,13 +117,24 @@ export default function Ouvriers() {
     'Emballage': 'bg-pink-100 text-pink-700',
   }
 
+  const titreHeader = user?.role === 'superviseur' ? 'Liste des Ouvriers' : 'Gestion des Ouvriers'
+
   return (
     <div className="flex flex-col gap-6">
+
+      {/* Popup confirmation */}
+      {confirmOuvrier && (
+        <ConfirmModal
+          nom={`${confirmOuvrier.prenom} ${confirmOuvrier.nom}`}
+          onConfirm={confirmerSuppression}
+          onCancel={() => setConfirmOuvrier(null)}
+        />
+      )}
 
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-zinc-800">Gestion des Ouvriers</h2>
+          <h2 className="text-2xl font-bold text-zinc-800">{titreHeader}</h2>
           <p className="text-sm text-zinc-500 flex items-center gap-1.5">
             <Building2 size={14} />
             {user?.role === 'superviseur' ? `Département : ${user.departement}` : 'Tous les départements'}
@@ -161,8 +201,8 @@ export default function Ouvriers() {
         </div>
       )}
 
-      {/* Formulaire */}
-      {showForm && (
+      {/* Formulaire — admin seulement */}
+      {showForm && user?.role === 'admin' && (
         <Card className="border border-blue-100 shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
@@ -216,7 +256,7 @@ export default function Ouvriers() {
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <Users size={18} className="text-zinc-600" />
-            <CardTitle className="text-base">Liste des ouvriers ({ouvriers.length})</CardTitle>
+            <CardTitle className="text-base">{titreHeader} ({ouvriers.length})</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -262,7 +302,7 @@ export default function Ouvriers() {
                   {user?.role === 'admin' && (
                     <td className="py-3">
                       <button
-                        onClick={() => supprimerOuvrier(o.id)}
+                        onClick={() => setConfirmOuvrier(o)}
                         className="flex items-center gap-1.5 text-red-500 hover:text-red-700 text-xs border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
                       >
                         <Trash2 size={12} />
