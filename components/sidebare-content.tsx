@@ -60,7 +60,7 @@ export default function SidebarContent() {
     window.location.href = '/login'
   }
 
-  const roleLabel = user?.role === 'admin' ? '🔴 Administrateur' : '🔵 Superviseur'
+  const roleLabel = user?.role === 'admin' ? ' Administrateur' : ' Superviseur'
   const roleBg = user?.role === 'admin' ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'
 
   return (
@@ -114,8 +114,8 @@ export default function SidebarContent() {
         {/* Info superviseur en lecture seule */}
         {user?.role === 'superviseur' && (
           <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
-            <p className="text-xs text-amber-700 font-medium">👁️ Mode lecture</p>
-            <p className="text-xs text-amber-600 mt-0.5">Vous pouvez consulter les ouvriers mais pas les modifier</p>
+            <p className="text-xs text-amber-700 font-medium"></p>
+            <p className="text-xs text-amber-600 mt-0.5"></p>
           </div>
         )}
 
