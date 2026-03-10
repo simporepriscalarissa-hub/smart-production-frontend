@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import axios from '@/lib/axios'
+import { socket } from '@/lib/socket'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { TrendingUp, Package, CheckCircle, XCircle, Trophy, AlertTriangle, Activity } from 'lucide-react'
+import { TrendingUp, Package, CheckCircle, XCircle, Trophy, AlertTriangle, Activity, Wifi, WifiOff } from 'lucide-react'
 
 interface OEE {
   oee: string
@@ -33,46 +34,111 @@ interface OuvrierStat {
   taux: number
 }
 
+interface Notification {
+  id: number
+  message: string
+  type: 'success' | 'error' | 'info'
+  time: string
+}
+
 export default function Dashboard() {
   const [oee, setOee] = useState<OEE | null>(null)
   const [productions, setProductions] = useState<Production[]>([])
   const [top5, setTop5] = useState<OuvrierStat[]>([])
   const [moins5, setMoins5] = useState<OuvrierStat[]>([])
+  const [connected, setConnected] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notifId, setNotifId] = useState(0)
+
+  const addNotification = (message: string, type: 'success' | 'error' | 'info') => {
+    const id = notifId + 1
+    setNotifId(id)
+    const time = new Date().toLocaleTimeString('fr-FR')
+    setNotifications(prev => [{ id, message, type, time }, ...prev].slice(0, 5))
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id))
+    }, 5000)
+  }
+
+  const calculerStats = (prods: Production[]) => {
+    const stats: Record<string, OuvrierStat> = {}
+    prods.forEach((p) => {
+      if (!p.ouvrier) return
+      const nom = `${p.ouvrier.prenom} ${p.ouvrier.nom}`
+      if (!stats[nom]) stats[nom] = { nom, produit: 0, nonConforme: 0, taux: 0 }
+      stats[nom].produit += p.quantiteProduite
+      stats[nom].nonConforme += p.quantiteNonConforme
+    })
+    Object.values(stats).forEach((s) => {
+      s.taux = s.produit > 0 ? ((s.produit - s.nonConforme) / s.produit) * 100 : 0
+    })
+    const sorted = Object.values(stats).sort((a, b) => b.taux - a.taux)
+    setTop5(sorted.slice(0, 5))
+    setMoins5([...sorted].sort((a, b) => a.taux - b.taux).slice(0, 5))
+  }
+
+  const fetchData = async () => {
+    try {
+      const [oeeRes, prodRes] = await Promise.all([
+        axios.get('/oee'),
+        axios.get('/production'),
+      ])
+      setOee(oeeRes.data)
+      setProductions(prodRes.data)
+      calculerStats(prodRes.data)
+    } catch (err) {
+      console.log('Erreur:', err)
+    }
+  }
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [oeeRes, prodRes] = await Promise.all([
-          axios.get('/oee'),
-          axios.get('/production'),
-        ])
-        setOee(oeeRes.data)
-        const prods: Production[] = prodRes.data
-        setProductions(prods)
-
-        const stats: Record<string, OuvrierStat> = {}
-        prods.forEach((p) => {
-          if (!p.ouvrier) return
-          const nom = `${p.ouvrier.prenom} ${p.ouvrier.nom}`
-          if (!stats[nom]) {
-            stats[nom] = { nom, produit: 0, nonConforme: 0, taux: 0 }
-          }
-          stats[nom].produit += p.quantiteProduite
-          stats[nom].nonConforme += p.quantiteNonConforme
-        })
-
-        Object.values(stats).forEach((s) => {
-          s.taux = s.produit > 0 ? ((s.produit - s.nonConforme) / s.produit) * 100 : 0
-        })
-
-        const sorted = Object.values(stats).sort((a, b) => b.taux - a.taux)
-        setTop5(sorted.slice(0, 5))
-        setMoins5([...sorted].sort((a, b) => a.taux - b.taux).slice(0, 5))
-      } catch (err) {
-        console.log('Erreur:', err)
-      }
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData()
+
+    // WebSocket events
+    socket.on('connect', () => {
+      setConnected(true)
+      addNotification('Connexion temps réel établie', 'success')
+    })
+
+    socket.on('disconnect', () => {
+      setConnected(false)
+      addNotification('Connexion temps réel perdue', 'error')
+    })
+
+    // Nouvelle production reçue en temps réel
+    socket.on('nouvelle_production', (production: Production) => {
+      setProductions(prev => {
+        const updated = [production, ...prev]
+        calculerStats(updated)
+        return updated
+      })
+      const nom = production.ouvrier ? `${production.ouvrier.prenom} ${production.ouvrier.nom}` : 'Ouvrier'
+      addNotification(
+        production.quantiteNonConforme > 0
+          ? `⚠️ ${nom} — ${production.quantiteNonConforme} pièce(s) NOK`
+          : `✅ ${nom} — ${production.quantiteProduite} pièce(s) conformes`,
+        production.quantiteNonConforme > 0 ? 'error' : 'success'
+      )
+    })
+
+    // OEE mis à jour en temps réel
+    socket.on('oee_update', (data: OEE) => {
+      setOee(data)
+    })
+
+    // Présence ouvrier RFID
+    socket.on('presence_ouvrier', (ouvrier) => {
+      addNotification(`📡 ${ouvrier.prenom} ${ouvrier.nom} a scanné son badge`, 'info')
+    })
+
+    return () => {
+      socket.off('connect')
+      socket.off('disconnect')
+      socket.off('nouvelle_production')
+      socket.off('oee_update')
+      socket.off('presence_ouvrier')
+    }
   }, [])
 
   const dataProduction = productions.slice(0, 7).map((p) => ({
@@ -84,15 +150,42 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-6">
 
-      {/* Titre */}
+      {/* Notifications temps réel */}
+      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 w-80">
+        {notifications.map((n) => (
+          <div
+            key={n.id}
+            className={`flex items-start gap-3 p-3.5 rounded-xl shadow-lg border text-sm animate-in slide-in-from-right-5 ${
+              n.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+              n.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+              'bg-blue-50 border-blue-200 text-blue-800'
+            }`}
+          >
+            <div className="flex-1">
+              <p className="font-medium">{n.message}</p>
+              <p className="text-xs opacity-60 mt-0.5">{n.time}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-zinc-800">Tableau de bord</h2>
           <p className="text-sm text-zinc-500">Vue d&apos;ensemble de la production</p>
         </div>
-        <div className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-full text-sm font-medium">
-          <Activity size={16} />
-          Système actif
+        <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+            connected ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+          }`}>
+            {connected ? <Wifi size={15} /> : <WifiOff size={15} />}
+            {connected ? 'Temps réel actif' : 'Hors ligne'}
+          </div>
+          <div className="flex items-center gap-2 bg-zinc-50 text-zinc-600 px-4 py-2 rounded-full text-sm font-medium">
+            <Activity size={15} />
+            Système actif
+          </div>
         </div>
       </div>
 
@@ -260,6 +353,11 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <Package size={18} className="text-zinc-600" />
             <CardTitle className="text-base">Dernières productions</CardTitle>
+            {connected && (
+              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 ml-auto text-xs">
+                🔴 Live
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent>
