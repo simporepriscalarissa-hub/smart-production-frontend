@@ -10,6 +10,7 @@ import {
   LayoutDashboard, Factory, Users, UserCog,
   Building2, BarChart3, Tv, Settings, LogOut, Eye,
   Scan,
+  Brain,
 } from "lucide-react"
  
 const menuAdmin = [
@@ -22,6 +23,7 @@ const menuAdmin = [
   { label: "Écran TV", href: "/dashboard/ecran-tv", icon: Tv },
   { label: "Paramètres", href: "/dashboard/parametres", icon: Settings },
   { label: "Détection IA", href: "/dashboard/detection-ia", icon: Scan },
+  { label: "Détection IA", href: "/dashboard/detection-ia", icon: Brain },
 ]
 
 const menuSuperviseur = [
