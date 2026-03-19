@@ -9,8 +9,9 @@ import Image from "next/image"
 import {
   LayoutDashboard, Factory, Users, UserCog,
   Building2, BarChart3, Tv, Settings, LogOut, Eye,
+  Scan,
 } from "lucide-react"
-
+ 
 const menuAdmin = [
   { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
   { label: "Entrée en production", href: "/dashboard/production", icon: Factory },
@@ -20,6 +21,7 @@ const menuAdmin = [
   { label: "Rapports", href: "/dashboard/rapports", icon: BarChart3 },
   { label: "Écran TV", href: "/dashboard/ecran-tv", icon: Tv },
   { label: "Paramètres", href: "/dashboard/parametres", icon: Settings },
+  { label: "Détection IA", href: "/dashboard/detection-ia", icon: Scan },
 ]
 
 const menuSuperviseur = [
