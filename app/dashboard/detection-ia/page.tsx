@@ -5,6 +5,7 @@ import { socket } from '@/lib/socket'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, XCircle, Activity, AlertTriangle, Wifi, WifiOff, Brain, TrendingUp } from 'lucide-react'
+import { APP_CONFIG } from '@/lib/config'
 
 interface AnalyseIA {
   id: number
@@ -23,6 +24,7 @@ export default function DetectionIA() {
   const [dernierResultat, setDernierResultat] = useState<AnalyseIA | null>(null)
   const [alertes, setAlertes] = useState<{ message: string; heure: string }[]>([])
 
+  const IA_URL = APP_CONFIG.iaUrl
   const totalAnalyses = analyses.length
   const totalConformes = analyses.filter(a => a.conforme).length
   const totalDefauts = analyses.filter(a => !a.conforme).length
