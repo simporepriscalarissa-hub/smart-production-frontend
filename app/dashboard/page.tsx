@@ -95,7 +95,10 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData()
 
-    // WebSocket events
+    const pollingInterval = setInterval(() => {
+      fetchData()
+    }, 5000)
+
     socket.on('connect', () => {
       setConnected(true)
       addNotification('Connexion temps réel établie', 'success')
@@ -103,36 +106,36 @@ export default function Dashboard() {
 
     socket.on('disconnect', () => {
       setConnected(false)
-      addNotification('Connexion temps réel perdue', 'error')
+      addNotification('Connexion temps réel perdue — polling actif', 'info')
     })
 
-    // Nouvelle production reçue en temps réel
     socket.on('nouvelle_production', (production: Production) => {
       setProductions(prev => {
         const updated = [production, ...prev]
         calculerStats(updated)
         return updated
       })
-      const nom = production.ouvrier ? `${production.ouvrier.prenom} ${production.ouvrier.nom}` : 'Ouvrier'
+      const nom = production.ouvrier
+        ? `${production.ouvrier.prenom} ${production.ouvrier.nom}`
+        : 'Ouvrier'
       addNotification(
         production.quantiteNonConforme > 0
-          ? `⚠️ ${nom} — ${production.quantiteNonConforme} pièce(s) NOK`
-          : `✅ ${nom} — ${production.quantiteProduite} pièce(s) conformes`,
+          ? `${nom} — ${production.quantiteNonConforme} pièce(s) NOK`
+          : `${nom} — ${production.quantiteProduite} pièce(s) conformes`,
         production.quantiteNonConforme > 0 ? 'error' : 'success'
       )
     })
 
-    // OEE mis à jour en temps réel
     socket.on('oee_update', (data: OEE) => {
       setOee(data)
     })
 
-    // Présence ouvrier RFID
     socket.on('presence_ouvrier', (ouvrier) => {
-      addNotification(`📡 ${ouvrier.prenom} ${ouvrier.nom} a scanné son badge`, 'info')
+      addNotification(`${ouvrier.prenom} ${ouvrier.nom} a scanné son badge`, 'info')
     })
 
     return () => {
+      clearInterval(pollingInterval)
       socket.off('connect')
       socket.off('disconnect')
       socket.off('nouvelle_production')
