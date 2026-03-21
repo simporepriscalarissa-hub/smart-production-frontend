@@ -30,7 +30,7 @@ export default function DetectionIA() {
   const totalDefauts = analyses.filter(a => !a.conforme).length
   const tauxQualite = totalAnalyses > 0 ? ((totalConformes / totalAnalyses) * 100).toFixed(1) : '0'
 
-  useEffect(() => {
+ useEffect(() => {
     socket.on('connect', () => setConnected(true))
     socket.on('disconnect', () => setConnected(false))
 
@@ -77,6 +77,7 @@ export default function DetectionIA() {
       socket.off('nouvelle_production')
     }
   }, [])
+
 
   return (
     <div className="flex flex-col gap-6">
