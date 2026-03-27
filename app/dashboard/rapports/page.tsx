@@ -52,20 +52,23 @@ export default function Rapports() {
     fetchData()
   }, [])
 
-  const exportPDF = async () => {
-  const { default: html2pdf } = await import('html2pdf.js')
+const exportPDF = async () => {
+  if (typeof window === 'undefined') return
   const element = reportRef.current
   if (!element) return
+
+  const html2pdf = (await import('html2pdf.js')).default
+
   const opt = {
     margin: 1,
     filename: `rapport-production-${new Date().toLocaleDateString('fr-FR')}.pdf`,
     image: { type: 'jpeg' as const, quality: 0.98 },
-    html2canvas: { scale: 2 },
+    html2canvas: { scale: 2, useCORS: true },
     jsPDF: { unit: 'cm' as const, format: 'a4', orientation: 'portrait' as const }
   }
+
   html2pdf().set(opt).from(element).save()
 }
-
   const dataProduction = productions.slice(0, 10).map(p => ({
     nom: p.ouvrier ? `${p.ouvrier.prenom[0]}.${p.ouvrier.nom}` : '?',
     produit: p.quantiteProduite,
