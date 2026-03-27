@@ -54,32 +54,42 @@ export default function Rapports() {
   }, [])
 
   const exportPDF = async () => {
-    if (typeof window === 'undefined') return
-    const element = reportRef.current
-    if (!element) return
+  if (typeof window === 'undefined') return
+  const element = reportRef.current
+  if (!element) return
 
-    setExportDate(
-      `${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`
-    )
+  const html2canvas = (await import('html2canvas')).default
+  const jsPDF = (await import('jspdf')).default
 
-    // Délai pour que le DOM se mette à jour avant la capture
-    await new Promise(resolve => setTimeout(resolve, 100))
+  const dateStr = `${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`
+  setExportDate(dateStr)
 
-    const html2pdf = (await import('html2pdf.js')).default
+  await new Promise(resolve => setTimeout(resolve, 200))
 
-    const opt = {
-      margin: 1,
-      filename: `rapport-production-${new Date().toLocaleDateString('fr-FR')}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'cm' as const, format: 'a4', orientation: 'portrait' as const }
-    }
+  const canvas = await html2canvas(element, { scale: 2, useCORS: true })
+  const imgData = canvas.toDataURL('image/jpeg', 0.98)
 
-    html2pdf().set(opt).from(element).save()
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+  const pageWidth = pdf.internal.pageSize.getWidth()
+  const pageHeight = pdf.internal.pageSize.getHeight()
+  const imgHeight = (canvas.height * pageWidth) / canvas.width
 
-    // Réinitialiser la date après export
-    setTimeout(() => setExportDate(null), 500)
+  let heightLeft = imgHeight
+  let position = 0
+
+  pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight)
+  heightLeft -= pageHeight
+
+  while (heightLeft > 0) {
+    position -= pageHeight
+    pdf.addPage()
+    pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight)
+    heightLeft -= pageHeight
   }
+
+  pdf.save(`rapport-production-${new Date().toLocaleDateString('fr-FR')}.pdf`)
+  setTimeout(() => setExportDate(null), 500)
+}
 
   const dataProduction = productions.slice(0, 10).map(p => ({
     nom: p.ouvrier ? `${p.ouvrier.prenom[0]}.${p.ouvrier.nom}` : '?',
