@@ -55,55 +55,56 @@ export default function Rapports() {
   }, [])
 
   const exportPDF = async () => {
-  if (typeof window === 'undefined') return
-  const element = reportRef.current
-  if (!element) return
+    if (typeof window === 'undefined') return
+    const element = reportRef.current
+    if (!element) return
 
-  setExporting(true)
+    setExporting(true)
 
-  const dateStr = `${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`
-  setExportDate(dateStr)
+    const dateStr = `${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`
+    setExportDate(dateStr)
 
-  await new Promise(resolve => setTimeout(resolve, 200))
+    await new Promise(resolve => setTimeout(resolve, 200))
 
-  try {
-    const { default: html2canvas } = await import('html2canvas')
-    const jsPDF = (await import('jspdf')).jsPDF
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-    } as Parameters<typeof html2canvas>[1])
+    try {
+      const { default: html2canvas } = await import('html2canvas')
+      const jsPDF = (await import('jspdf')).jsPDF
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.98)
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
-    const pageWidth = pdf.internal.pageSize.getWidth()
-    const pageHeight = pdf.internal.pageSize.getHeight()
-    const imgHeight = (canvas.height * pageWidth) / canvas.width
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+      } as Parameters<typeof html2canvas>[1])
 
-    let heightLeft = imgHeight
-    let position = 0
+      const imgData = canvas.toDataURL('image/jpeg', 0.98)
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const imgHeight = (canvas.height * pageWidth) / canvas.width
 
-    pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight)
-    heightLeft -= pageHeight
+      let heightLeft = imgHeight
+      let position = 0
 
-    while (heightLeft > 0) {
-      position -= pageHeight
-      pdf.addPage()
       pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight)
       heightLeft -= pageHeight
-    }
 
-    pdf.save(`rapport-production-${new Date().toLocaleDateString('fr-FR')}.pdf`)
-  } catch (err) {
-    console.error('Erreur export PDF:', err)
-  } finally {
-    setTimeout(() => {
-      setExportDate(null)
-      setExporting(false)
-    }, 500)
+      while (heightLeft > 0) {
+        position -= pageHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+
+      pdf.save(`rapport-production-${new Date().toLocaleDateString('fr-FR')}.pdf`)
+    } catch (err) {
+      console.error('Erreur export PDF:', err)
+    } finally {
+      setTimeout(() => {
+        setExportDate(null)
+        setExporting(false)
+      }, 500)
+    }
   }
-}
 
   const dataProduction = productions.slice(0, 10).map(p => ({
     nom: p.ouvrier ? `${p.ouvrier.prenom[0]}.${p.ouvrier.nom}` : '?',
@@ -237,7 +238,7 @@ export default function Rapports() {
             </CardContent>
           </Card>
 
-          {/* Graphique qualité */}
+          {/* Graphique qualité — CORRIGÉ */}
           <Card className="shadow-sm border border-zinc-100">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Répartition qualité</CardTitle>
@@ -249,15 +250,15 @@ export default function Rapports() {
                     data={dataQualite}
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
+                    outerRadius={75}
                     dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
+                    label={({ percent }: { percent?: number }) => `${((percent ?? 0) * 100).toFixed(1)}%`}                    labelLine={false}
                   >
                     {dataQualite.map((entry, index) => (
                       <Cell key={index} fill={COLORS[index]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip formatter={(value, name) => [Number(value).toLocaleString('fr-FR'), name]} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
