@@ -32,6 +32,7 @@ export default function Rapports() {
   const [oee, setOee] = useState<OEE | null>(null)
   const [productions, setProductions] = useState<Production[]>([])
   const [loading, setLoading] = useState(true)
+  const [exportDate, setExportDate] = useState<string | null>(null)
   const reportRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -57,6 +58,13 @@ export default function Rapports() {
     const element = reportRef.current
     if (!element) return
 
+    setExportDate(
+      `${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`
+    )
+
+    // Délai pour que le DOM se mette à jour avant la capture
+    await new Promise(resolve => setTimeout(resolve, 100))
+
     const html2pdf = (await import('html2pdf.js')).default
 
     const opt = {
@@ -68,6 +76,9 @@ export default function Rapports() {
     }
 
     html2pdf().set(opt).from(element).save()
+
+    // Réinitialiser la date après export
+    setTimeout(() => setExportDate(null), 500)
   }
 
   const dataProduction = productions.slice(0, 10).map(p => ({
@@ -124,9 +135,11 @@ export default function Rapports() {
             <FileText size={24} />
             <h3 className="text-xl font-bold">Rapport de Production — Smart Production Counter</h3>
           </div>
-          <p className="text-blue-100 text-sm">
-            Généré le {new Date().toLocaleDateString('fr-FR')} à {new Date().toLocaleTimeString('fr-FR')}
-          </p>
+          {exportDate && (
+            <p className="text-blue-100 text-sm">
+              Généré le {exportDate}
+            </p>
+          )}
         </div>
 
         {/* KPIs */}
