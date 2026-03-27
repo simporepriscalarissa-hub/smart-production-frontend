@@ -68,8 +68,7 @@ export default function Rapports() {
 
   try {
     const { default: html2canvas } = await import('html2canvas')
-    const { jsPDF } = await import('jspdf')
-
+    const jsPDF = (await import('jspdf')).jsPDF
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
